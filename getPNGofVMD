@@ -1,0 +1,129 @@
+#!/bin/bash
+
+# If VMD was a personalizate installation, please find the library of tachyon_LINUXAMD64 or equivalent 
+# 		and put the path and command for using VMD in the next two lines
+# Authorship, support, and maintenance of this script is attributed to
+# Luis Alfredo Nunez Meneses
+# luis.alfredo.nu@gmail.com
+
+path_of_tachyon="/usr/local/lib/vmd/tachyon_LINUXAMD64"
+vmd_line_command="vmd"
+
+#####################################################################
+#--------------------------------------------------------------   Fdx
+#####################################################################
+#--------------------------------------------------------------   Fdx
+#####################################################################
+
+the_prog_name=$(echo "$0" | sed -e 's;\(.*\)/\(.*\);\2;')
+cmdl_argv=($@)
+cmdl_argc=${#cmdl_argv[@]}
+
+help_and_syntax()
+{
+   the_prog_name=$1
+echo -e "\n    Script syntax: \033[1m$the_prog_name\033[0m [\033[0;4moption(s)\033[0m \
+[\033[4margument(s)\033[0m]] [\033[4minputname.xyz\033[0m]"
+#Here you may put a description of the script. The text between 'END_USAGE_TEXT'
+#will be displayed as it is.
+cat << END_USAGE_TEXT
+
+This script will create a images in png format from file with format VMD using VMD program
+
+Tip:
+	If you want a different view of your molecule, please open the file "name_file.vmd" with VMD like this
+
+	vmd -e name_file.vmd
+
+	Save the visualization how you like to look your molecule in the same file and run this script again.
+
+Description of options. For instance:
+   -h               Display the help menu.
+   -b color         Color of background. "black" or "white". Default white
+   -x ####          Size wight image. Default 800.
+   -y ####          Size height image. Default 680.
+
+END_USAGE_TEXT
+}
+#####################################################################
+prove_if_exist_tachyon_lib(){
+	path=$1
+	if [[ -f $path ]]
+	then
+		echo $path
+	else
+		echo -e " Error: Missing the tachyon_LINUXAMD64 \n Search where is the lib of vmd"
+		exit 2
+	fi
+}
+#####################################################################
+generate_png_from_vmd(){
+	file_name=$1
+	res_x=$2
+	res_y=$3
+	backgroud_color=$4
+
+	base_file_name=${file_name%.*}
+	file_name_vmd_view="$base_file_name.vmd"
+	file_name_for_render="$base_file_name.render"
+	file_name_png="$base_file_name.png"
+	file_name_tga="$base_file_name.tga"
+
+	tachyon=$(prove_if_exist_tachyon_lib $path_of_tachyon)
+	vmd_commands="axes location off \n render Tachyon $file_name_for_render"
+	echo -e $vmd_commands | $vmd_line_command -e $file_name_vmd_view  -size $res_x $res_y -dispdev text -eofexit
+	$tachyon -V -aasamples 12 -trans_max_surfaces 1 -rescale_lights 2.0 -add_skylight 0.0 $file_name_for_render -o $file_name_tga 
+	convert  $file_name_tga $file_name_png
+	
+	rm $file_name_for_render
+	rm $file_name_tga
+}
+#####################################################################
+#     Corpus of the Script
+#####################################################################
+
+file_name_vmd="${@: -1}"
+
+size_in_x=800
+size_in_y=800
+backgroud_color="white"
+
+#Checks the consistency of the argument list
+if [ $# -lt 1 ]; then
+	echo "Error: input filename missing (Try -h for more information.)."
+	exit 2
+fi
+
+while getopts ":hb:x:y:" opt; do
+  case $opt in
+  	 b)
+	 	backgroud_color="$OPTARG"
+	 	;;
+  	 x)
+	 	size_in_x=$OPTARG
+	 	;;
+	 y)
+	 	size_in_y=$OPTARG
+	 	;;
+    h)
+      help_and_syntax $prog_name
+      exit 0
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
+if [ ! -f $file_name_vmd ]; then
+	echo "Error: input filename missing (Try -h for more information.)."
+	exit 2
+fi
+
+echo " Create image in png of $file_name_vmd"
+generate_png_from_vmd $file_name_vmd $size_in_x $size_in_y $backgroud_color
+echo
+	

@@ -1,0 +1,216 @@
+#!/bin/bash
+thisScriptName=$0
+usage()
+{
+echo -e "\n    usage: \033[1m$1 [option [value(s)]] ... [option [value(s)]]\033[0m"
+cat << END_USAGE_TEXT
+
+This script computes the NCI field and makes two cubes, and one plot
+(s vs rho), which can be used to refine the cubes (by selecting
+appropriate cutoffs for rho and s). The script also generates
+VMD scripts that automatically loads and visualizes the 
+NCI index.
+
+Options 
+  -h           Displays the help menu.
+  -D densname  Sets the cube file name to be cube file type
+  -S Sredname  Sets the cube file name to be cube file type
+  -d plotdata  Sets the file with data of S and dens for gnuplot
+  -R rmax      Sets the range of rho to color scale
+  -G smax      Sets the upper reduced density gradient (s) cutoff to be smax
+
+END_USAGE_TEXT
+}
+print_vmd_script()
+{
+   the_rho_file_name=$1
+   the_red_grad_file_name=$2
+   the_red_grad_value=$3
+   the_rho_value=$4
+   the_tga_file_name="$5"
+cat << END_VMD_SCRIPT
+#!/usr/local/bin/vmd
+
+#VMD script written by save_state Revision: 1.41 $
+#VMD version: 1.8.6
+set viewplist
+set fixedlist
+# Display settings
+display projection   Orthographic
+display height       4.000000
+display distance     -2.000000
+display nearclip set 0.000000
+display depthcue   off
+display shadows off
+display ambientocclusion off
+display aoambient 0.800000
+display aodirect 0.300000
+display dof off
+display dof_fnumber 64.000000
+display dof_focaldist 0.700000
+# load new molecule
+mol new $the_red_grad_file_name type cube first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
+mol addfile $the_rho_file_name type cube first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
+#
+# representation of the atoms
+mol delrep 0 top
+mol representation CPK 1.000000 0.400000 150.000000 150.000000
+mol color Element
+mol material Opaque
+mol addrep top
+mol selupdate 1 top 0
+mol colupdate 1 top 0
+# add representation of the surface
+mol representation Isosurface $the_red_grad_value 0 0 0 1 1
+#The following line chooses the first (0) cube to be coloured with volume representation.
+mol color Volume 1
+mol selection {all}
+mol material Opaque
+mol addrep top
+mol scaleminmax top 1 -$the_rho_value $the_rho_value
+mol smoothrep top 0 0
+mol selupdate 1 top 0
+mol colupdate 1 top 0
+mol drawframes top 1 {now}
+proc vmdrestoremycolors {} {
+   color scale colors BGR {0.0 0.0 1.0} {0.0 1.0 0.0} {1.0 0.0 0.0}
+   color scale method BGR
+  set colorcmds {
+    {color Display {Background} white}
+    {color Display {BackgroundTop} black}
+    {color Display {BackgroundBot} blue2}
+    {color Display {FPS} black}
+    {color Element {X} cyan}
+    {color Element {Cl} green}
+  }
+  foreach colcmd \$colorcmds {
+    set val [catch {eval \$colcmd}]
+  }
+}
+vmdrestoremycolors
+#some more
+
+
+END_VMD_SCRIPT
+}
+#Prints all values of a cube as a single column
+cube_to_column(){
+   cube_file="$1"
+   let number_of_atoms=$(sed -n '3p' "$cube_file"| awk '{print $1;}')+6
+   awk '{if (NR>'$number_of_atoms'){print $0;}}' $cube_file | awk '$1=$1'|tr [:space:] "\n"
+}
+#Makes a plot using gnuplot
+make_plot(){
+   dat_file_name=$1
+   pdf_file_name=${dat_file_name%dat}pdf
+   gnuplot <<-EOFMarker
+      set xlabel '{/Symbol r}' offset character 0,0.75
+      set ylabel 's' offset character 2,0
+      set xrange [-5.0:5.0]
+      set yrange [0.0:3.0]
+      set tics font ",12" scale 2.0
+      set xtics 0.5
+      set ytics 0.2
+      set mxtics 5
+      set mytics 2
+      set grid ytics mytics
+      set grid xtics mxtics 
+      set tmargin at screen 0.95
+      set bmargin at screen 0.13
+      set lmargin at screen 0.11
+      set rmargin at screen 0.96
+      set term postscript eps enhanced color linewidth 2 fontscale 1.5
+      set output '|epstopdf --filter --outfile="$pdf_file_name"'
+      plot "$dat_file_name" w p pt 7 ps 0.5 lc rgb "red" title "NCI" 
+EOFMarker
+}
+#Makes a plot of GrdRedRho vs Rho
+plot_redgradrho_vs_rho() {
+   data_cube_RedDensGrad="$1"
+   data_cube_Rho="$2"
+   data_plot_NCI="${3}"
+   if [[ ! -f "$3"  ]];then
+      data_plot_NCI="${data_cube_RedDensGrad%.cube}_SvsRho.dat"
+      tmp_dat_rho_file=${RANDOM}${RANDOM}
+      tmp_dat_s_file=${RANDOM}${RANDOM}
+      cube_to_column $data_cube_Rho > $tmp_dat_rho_file
+      cube_to_column $data_cube_RedDensGrad > $tmp_dat_s_file
+      paste $tmp_dat_rho_file $tmp_dat_s_file > $data_plot_NCI 
+      rm $tmp_dat_rho_file; rm $tmp_dat_s_file
+      sed -i '/1.000000e+02\t1.000000e+02/d' $data_plot_NCI
+   fi
+   make_plot $data_plot_NCI
+}
+
+if [ $# -lt 1 ]
+then
+   echo -e "\033[1m\033[31mError:\033[0m Invalid syntax! (Try $thisScriptName -h for more information.)."
+   exit 2
+fi
+
+# Default values for limits of cubes to be will compute
+cubeRhoFileName=""
+cubeRedGradFileName=""
+dataSvsRho=""
+rhoRange="5.0"
+redDensGradMax="0.6"
+while getopts ":hD:S:R:G:d:" opt; do
+  case $opt in
+    h)
+      usage $0
+      exit 0
+      ;;
+    D)
+      cubeRhoFileName="$OPTARG"
+      ;;
+    S)
+      cubeRedGradFileName="$OPTARG"
+      ;;
+    d)
+      dataSvsRho="$OPTARG"
+      ;;
+    R)
+      rhoRange="$OPTARG"
+      ;;
+    G)
+      redDensGradMax="$OPTARG"
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
+
+
+
+if [[ -f "$cubeRedGradFileName" && -f "$cubeRhoFileName" ]];then
+
+   echo Files
+   echo $cubeRedGradFileName
+   echo $cubeRhoFileName
+else
+   echo -e "\033[1m\033[31mError:\033[0m Cubes file name missing" 
+   echo -e "\tTry \n\t\t$thisScriptName -h\n\tfor more information."
+   exit 2
+fi
+
+
+#This final extension was acquired from scr/common/fldtypesdef.h file of the function getFieldTypeKeyShort
+baseFileName=${cubeRedGradFileName%.cube}
+
+#Names of VMD script files
+outputVMDFileName="${baseFileName##*/}_.vmd"
+outputTGAFileName="${baseFileName##*/}_.tga"
+#Asks and saves the current directory (VMD sometimes needs absolute paths)
+currentWD=$(pwd)
+#
+#Makes the VMD scripts.
+echo -e "Making VMD scripts..."
+print_vmd_script "$cubeRhoFileName" "$cubeRedGradFileName" $redDensGradMax $rhoRange "$outputTGAFileName" > "$outputVMDFileName"
+
+#echo -e "Making s vs rho plot..."
+#plot_redgradrho_vs_rho "$cubeRedGradFileName" "$cubeRhoFileName" "$dataSvsRho"
