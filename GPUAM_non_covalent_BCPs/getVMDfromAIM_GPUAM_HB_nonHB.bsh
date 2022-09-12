@@ -9,7 +9,7 @@ cmdl_argc=${#cmdl_argv[@]}
 print_vmd_script(){
    local file_Geo=$1
    local file_CP=$2
-   local file_BP=$3
+   local file_BP=$2
    local file_CP_nonHB=$4
    local file_BP_nonHB=$5
 
@@ -73,25 +73,20 @@ mol colupdate 2 top 0
 mol scaleminmax top 2 0.000000 0.000000
 mol smoothrep top 2 0
 mol drawframes top 2 {now}
-mol rename top ${file_CP}
-set viewpoints([molinfo top]) {{{1 0 0 -7.88505e-07} {0 1 0 8.81512e-07} {0 0 1 1.24678} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}} {{1.0 0 0 0} {0 1.0 0 0} {0 0 1.0 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}}}
-lappend viewplist [molinfo top]
-# done with molecule 0
-mol new ${file_BP} type xyz first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
-mol delrep 0 top
 mol representation CPK 0.200000 0.000000 32.000000 32.000000
 mol color ColorID 11
 mol selection {name "BP.*"}
 mol material Opaque
 mol addrep top
-mol selupdate 0 top 0
-mol colupdate 0 top 0
-mol scaleminmax top 0 0.000000 0.000000
-mol smoothrep top 0 0
-mol drawframes top 0 {now}
-mol rename top ${file_BP}
+mol selupdate 3 top 0
+mol colupdate 3 top 0
+mol scaleminmax top 3 0.000000 0.000000
+mol smoothrep top 3 0
+mol drawframes top 3 {now}
+mol rename top HB_${file_CP}
 set viewpoints([molinfo top]) {{{1 0 0 -7.88505e-07} {0 1 0 8.81512e-07} {0 0 1 1.24678} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}} {{1.0 0 0 0} {0 1.0 0 0} {0 0 1.0 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}}}
 lappend viewplist [molinfo top]
+# done with molecule 0
 mol new ${file_CP_nonHB} type xyz first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
 mol delrep 0 top
 mol representation CPK 0.500000 0.000000 32.000000 32.000000
@@ -124,26 +119,19 @@ mol colupdate 2 top 0
 mol scaleminmax top 2 0.000000 0.000000
 mol smoothrep top 2 0
 mol drawframes top 2 {now}
-mol rename top ${file_CP_nonHB}
-set viewpoints([molinfo top]) {{{1 0 0 -7.88505e-07} {0 1 0 8.81512e-07} {0 0 1 1.24678} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}} {{1.0 0 0 0} {0 1.0 0 0} {0 0 1.0 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}}}
-lappend viewplist [molinfo top]
-# done with molecule 0
-mol new ${file_BP_nonHB} type xyz first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
-mol delrep 0 top
 mol representation CPK 0.200000 0.000000 32.000000 32.000000
 mol color ColorID 11
 mol selection {name "BP.*"}
 mol material Opaque
 mol addrep top
-mol selupdate 0 top 0
-mol colupdate 0 top 0
-mol scaleminmax top 0 0.000000 0.000000
-mol smoothrep top 0 0
-mol drawframes top 0 {now}
-mol rename top ${file_BP_nonHB}
+mol selupdate 3 top 0
+mol colupdate 3 top 0
+mol scaleminmax top 3 0.000000 0.000000
+mol smoothrep top 3 0
+mol drawframes top 3 {now}
+mol rename top nonHB_${file_CP_nonHB}
 set viewpoints([molinfo top]) {{{1 0 0 -7.88505e-07} {0 1 0 8.81512e-07} {0 0 1 1.24678} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}} {{1.0 0 0 0} {0 1.0 0 0} {0 0 1.0 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}}}
 lappend viewplist [molinfo top]
-# done with molecule 1
 # done with molecule 1
 mol new ${file_Geo} type xyz first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
 mol delrep 0 top
@@ -172,6 +160,10 @@ unset viewplist
 unset fixedlist
 mol top \$topmol
 unset topmol
+
+#Reset View
+display resetview
+
 proc vmdrestoremycolors {} {
 color scale colors RWB {1.0 0.0 0.0} {1.0 1.0 1.0} {0.0 0.0 1.0}
   color scale method RWB

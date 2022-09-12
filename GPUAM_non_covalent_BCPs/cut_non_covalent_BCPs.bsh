@@ -1,8 +1,9 @@
 #!/bin/bash
 
-#check if exist the other scripts
-#
+# Specify your path that contains this scripts
 path_scripts="/home/frodox/Maestria/VMDtips/GPUAM_non_covalent_BCPs/"
+
+#check if exist the other scripts
 if [ !  -f "${path_scripts}/non_covalent_interactions.py" ];then
    echo "Error: script non_covalent_interactions.py  missing ( Check path of script )."
    exit 2
@@ -35,7 +36,10 @@ Description of options. For instance:
    -c "file_CritP.xyz"              File with all critical points.
    -b "file_BPath.xyz"              File with all bond paths.
    -n "file_Crit.log"               File log of GPUAM. 
-   -r 408:433                       Range of atoms for. 
+   -r 408:433                       Analyze intermolecular contacts. Example -> 3:5,7,8,15:20
+                                    In this case the fragment contains 11 atoms:
+                                    3,4,5,7,8,15,16,17,18,19,20
+
 
 END_USAGE_TEXT
 }
