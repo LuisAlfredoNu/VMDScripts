@@ -1,0 +1,181 @@
+#!/bin/bash
+
+#check if exist the other scripts
+#
+path_scripts="/home/frodox/Maestria/VMDtips/GPUAM_non_covalent_BCPs/"
+if [ !  -f "${path_scripts}/non_covalent_interactions.py" ];then
+   echo "Error: script non_covalent_interactions.py  missing ( Check path of script )."
+   exit 2
+fi
+if [ !  -f "${path_scripts}/select_non-covalente_BPCs.bsh" ];then
+   echo "Error: script select_non-covalente_BPCs.bsh  missing ( Check path inside script )."
+   exit 2
+fi
+if [ !  -f "${path_scripts}/getVMDfromAIM_GPUAM_HB_nonHB.bsh" ];then
+   echo "Error: script getVMDfromAIM_GPUAM_HB_nonHB.bsh  missing ( Check path inside script )."
+   exit 2
+fi
+
+help_and_syntax()
+{
+   the_prog_name=$1
+echo -e "\n    Script syntax: \033[1m$the_prog_name\033[0m [\033[0;4moption(s)\033[0m \
+[\033[4margument(s)\033[0m]] "
+#Here you may put a description of the script. The text between 'END_USAGE_TEXT'
+#will be displayed as it is.
+cat << END_USAGE_TEXT
+
+This script will make a Cut, vmd representations and list in tex format of all BCPs
+
+Note: directory "Cut" must not exist.
+
+Description of options. For instance:
+   -h                               Display the help menu.
+   -g "file_geo.xyz"                File with geometry in XYZ.
+   -c "file_CritP.xyz"              File with all critical points.
+   -b "file_BPath.xyz"              File with all bond paths.
+   -n "file_Crit.log"               File log of GPUAM. 
+   -r 408:433                       Range of atoms for. 
+
+END_USAGE_TEXT
+}
+
+#-----------------------------------------------------------------------------# 
+# Main
+#-----------------------------------------------------------------------------# 
+
+input_geo=''
+input_xyz=''
+input_Bpath=''
+input_logGPUAM=''
+range_cut=''
+
+
+if [ $# -eq 0 ] ; then
+   echo "Error: options missing (Try -h for more information.)."
+   exit 2
+fi
+
+while getopts ":hg:c:b:n:r:" opt; do
+  case $opt in
+    g)
+      input_geo="$OPTARG"
+      ;;
+    c)
+      input_xyz="$OPTARG"
+      ;;
+    b)
+      input_Bpath="$OPTARG"
+      ;;
+    n)
+      input_logGPUAM="$OPTARG"
+      ;;
+    r)
+      range_cut="$OPTARG"
+      ;;
+    h)
+      help_and_syntax $prog_name
+      exit 0
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
+echo "$input_xyz"
+if [ ! -f $input_xyz ] || [ -z "$input_xyz" ]; then
+   echo "Error: input filename with critical points  missing (Try -h for more information.)."
+   exit 2
+fi
+if [ ! -f $input_geo ] || [ -z "$input_geo" ]; then
+   echo "Error: input filename with geometry  missing (Try -h for more information.)."
+   exit 2
+fi
+if [ ! -f $input_Bpath ] || [ -z "$input_Bpath" ]; then
+   echo "Error: input filename with bond paths  missing (Try -h for more information.)."
+   exit 2
+fi
+if [ ! -f $input_logGPUAM ] || [ -z "$input_logGPUAM" ]; then
+   echo "Error: input filename log of GPUAM  missing (Try -h for more information.)."
+   exit 2
+fi
+
+if [ -d "Cut" ];then
+   echo "Error: Directory Cut already exist, please change the name (Try -h for more information.)."
+   exit 2
+fi
+
+set -e
+#trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
+#trap 'echo "\"${last_command}\" command filed with exit code $?."' EXIT
+
+mkdir "Cut"
+cp $input_geo Cut/.
+cp $input_xyz Cut/.
+cp $input_Bpath Cut/.
+cp $input_logGPUAM Cut/.
+
+echo " Enter to directory Cut"
+cd "Cut"
+
+echo $input_logGPUAM > non_cov_int_input.tmp
+echo "y" >> non_cov_int_input.tmp
+echo "range_cut = ${range_cut}end"
+if [[ -n ${range_cut} ]]; then
+   echo "y" >> non_cov_int_input.tmp
+   echo "$range_cut" >> non_cov_int_input.tmp
+else 
+   echo "N" >> non_cov_int_input.tmp
+fi
+echo "    File log: $input_logGPUAM"
+echo "   Cut range: $range_cut"
+echo " Use program: non_covalent_interactions.py"
+echo "=========================================="
+python3 "${path_scripts}/non_covalent_interactions.py" < non_cov_int_input.tmp
+rm non_cov_int_input.tmp
+
+echo
+echo " Use program: select_non-covalente_BPCs.bsh"
+echo "=========================================="
+input_nonCovalent="${input_logGPUAM%.log}_nonCovalent.log"
+"${path_scripts}/select_non-covalente_BPCs.bsh" -c $input_xyz -b $input_Bpath -n $input_nonCovalent
+
+echo
+echo " Use program: getVMDfromAIM_GPUAM_HB_nonHB.bsh"
+echo "=========================================="
+
+input_HB="${input_xyz%.xyz}_non-covalent_HB.xyz"
+input_nonHB="${input_xyz%.xyz}_non-covalent_nonHB.xyz"
+"${path_scripts}/getVMDfromAIM_GPUAM_HB_nonHB.bsh" -a $input_HB -b $input_HB -c $input_nonHB -d $input_nonHB -g $input_geo
+
+echo
+echo " Print info in tex format"
+
+input_nonCovalent_tex="${input_logGPUAM%.log}_nonCovalent.tex"
+
+HBinfo=$(grep -n "Hydrogen Bond    Participan" $input_nonCovalent  | awk -F ':' '{print $1}')
+HBinfo=$((HBinfo + 1))
+
+HBendInfo=$(grep -n "Non-Hydrogen Bond  Participant Atoms" $input_nonCovalent  | awk -F ':' '{print $1}')
+HBendInfo=$(( HBendInfo -1 ))
+
+NonHBendInfo=$(grep -n "Summary of non-covalent" $input_nonCovalent  | awk -F ':' '{print $1}')
+NonHBendInfo=$((NonHBendInfo -2))
+
+echo "%==========================================" > $input_nonCovalent_tex
+echo " Print info in tex format" >> $input_nonCovalent_tex
+
+awk -v a="$HBinfo" -v b="$HBendInfo" -v c="$NonHBendInfo" 'a-1 ==NR {print $1" "$2"\t&\t"$8"\t&\t"$9"\t\\\\"} ' $input_nonCovalent >> $input_nonCovalent_tex
+awk -v a="$HBinfo" -v b="$HBendInfo" -v c="$NonHBendInfo" ' a <= NR && NR <= b {print $1"\t&\t"$6"\t&\t"$7"\t\\\\"}' $input_nonCovalent | sort -k3 -nr >> $input_nonCovalent_tex
+echo "%==========================================" >> $input_nonCovalent_tex
+awk -v a="$HBinfo" -v b="$HBendInfo" -v c="$NonHBendInfo" 'b+1 == NR {print $1" "$2"\t&\t"$6"\t&\t"$7"\t\\\\"} ' $input_nonCovalent >> $input_nonCovalent_tex
+awk -v a="$HBinfo" -v b="$HBendInfo" -v c="$NonHBendInfo" ' b+2 <= NR && NR <= c {print $1"\t&\t"$4"\t&\t"$5"\t\\\\"}' $input_nonCovalent | sort -k3 -nr >> $input_nonCovalent_tex
+
+awk -v a="$HBinfo" -v b="$HBendInfo" -v c="$NonHBendInfo" 'BEGIN{rho=0.0;lap=0.0} a <= NR && NR <= b {rho+=$6;lap+=$7} b+2 <= NR && NR <= c {rho+=$4;lap+=$5} END{print "Sum of rho = "rho "\nSum of lap = "lap}' $input_nonCovalent >> $input_nonCovalent_tex
+
+cat $input_nonCovalent_tex
+

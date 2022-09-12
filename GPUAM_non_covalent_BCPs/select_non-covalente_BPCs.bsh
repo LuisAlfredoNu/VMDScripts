@@ -1,0 +1,127 @@
+#!/bin/bash
+
+help_and_syntax()
+{
+   the_prog_name=$1
+echo -e "\n    Script syntax: \033[1m$the_prog_name\033[0m [\033[0;4moption(s)\033[0m \
+[\033[4margument(s)\033[0m]] "
+#Here you may put a description of the script. The text between 'END_USAGE_TEXT'
+#will be displayed as it is.
+cat << END_USAGE_TEXT
+
+This script will create vmd files with the output of GPUAM for critical points
+
+Description of options. For instance:
+   -h                               Display the help menu.
+   -c "file_CritP.xyz"              File with all critical points.
+   -b "file_BPath.xyz"              File with all bond paths.
+   -n "file_Crit_nonCovalent.log"   File with the geometry.
+
+END_USAGE_TEXT
+}
+
+#-----------------------------------------------------------------------------# 
+# Main
+#-----------------------------------------------------------------------------# 
+
+input_xyz=''
+input_Bpath=''
+input_nonCovalent=''
+
+
+if [ $# -eq 0 ] ; then
+   echo "Error: options missing (Try -h for more information.)."
+   exit 2
+fi
+
+while getopts ":hc:b:n:" opt; do
+  case $opt in
+    c)
+      input_xyz="$OPTARG"
+      ;;
+    b)
+      input_Bpath="$OPTARG"
+      ;;
+    n)
+      input_nonCovalent="$OPTARG"
+      ;;
+    h)
+      help_and_syntax $prog_name
+      exit 0
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
+if [ ! -f $input_xyz ] && [ -n "$input_xyz" ]; then
+   echo "Error: input filename with critical points  missing (Try -h for more information.)."
+   exit 2
+fi
+if [ ! -f $input_Bpath ] && [ -n "$input_Bpath" ]; then
+   echo "Error: input filename with bond paths  missing (Try -h for more information.)."
+   exit 2
+fi
+if [ ! -f $input_nonCovalent ] && [ -n "$input_nonCovalent" ]; then
+   echo "Error: input filename with non covalent interactions  missing (Try -h for more information.)."
+   exit 2
+fi
+
+HBinfo=$(grep -n "Hydrogen Bond    Participan" $input_nonCovalent  | awk -F ':' '{print $1}')
+HBinfo=$((HBinfo + 1))
+
+HBendInfo=$(grep -n "Non-Hydrogen Bond  Participant Atoms" $input_nonCovalent  | awk -F ':' '{print $1}')
+HBendInfo=$(( HBendInfo -1 ))
+
+listHB_CP=''
+if [ $HBinfo -le $HBendInfo ]; then
+   listHB_CP=($(sed -n "${HBinfo},${HBendInfo}p" $input_nonCovalent | awk '{print $9}' ))
+fi
+
+BCPstart=$(grep -n "BCP" $input_xyz | head -n 1 | cut -d ':' -f 1)
+
+ouput_xyz="${input_xyz%.xyz}_non-covalent_HB.xyz"
+
+echo $ouput_xyz
+:> $ouput_xyz
+
+for i in ${listHB_CP[@]}; do
+   sed -n "$((BCPstart+i-1))p" $input_xyz >> $ouput_xyz 
+done
+
+for i in ${listHB_CP[@]}; do
+   BPindex=$(printf "BP%04d" "$i")
+   grep "$BPindex" $input_Bpath  >> $ouput_xyz
+done
+
+linesN=$(cat $ouput_xyz | wc -l)
+sed -i "1s/^/$linesN \n Non covalent Bond critical points Hydrogen Bond \n /" $ouput_xyz
+
+
+NonHBinfo=$((HBendInfo+2))
+NonHBendInfo=$(grep -n "Summary of non-covalent" $input_nonCovalent  | awk -F ':' '{print $1}')
+NonHBendInfo=$((NonHBendInfo -1))
+
+listNonHB_CP=($(sed -n "${NonHBinfo},${NonHBendInfo}p" $input_nonCovalent | awk '{print $7}' ))
+
+BCPstart=$(grep -n "BCP" $input_xyz | head -n 1 | cut -d ':' -f 1)
+
+ouput_xyz="${input_xyz%.xyz}_non-covalent_nonHB.xyz"
+echo $ouput_xyz
+:>$ouput_xyz
+
+for i in ${listNonHB_CP[@]}; do
+   sed -n "$((BCPstart+i-1))p" $input_xyz >> $ouput_xyz 
+done
+
+for i in ${listNonHB_CP[@]}; do
+   BPindex=$(printf "BP%04d" "$i")
+   grep "$BPindex" $input_Bpath  >> $ouput_xyz
+done
+
+linesN=$(cat $ouput_xyz | wc -l)
+sed -i "1s/^/$linesN \n Non covalent Bond critical points Non-Hydrogen Bond \n /" $ouput_xyz

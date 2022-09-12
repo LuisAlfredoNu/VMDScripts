@@ -1,0 +1,271 @@
+#!/bin/bash
+
+the_prog_name=$0
+cmdl_argv=($@)
+cmdl_argc=${#cmdl_argv[@]}
+
+#####################################################################
+
+print_vmd_script(){
+   file_CP=$1
+   file_BP=$2
+   file_Geo=$3
+
+cat << END_VMD_SCRIPT
+#!/usr/local/bin/vmd
+# VMD script written by save_state \$Revision: 1.47 $
+# VMD version: 1.9.3
+set viewplist {}
+set fixedlist {}
+# Display settings
+display eyesep       0.065000
+display focallength  2.000000
+display height       6.000000
+display distance     -2.000000
+display projection   Perspective
+display nearclip set 0.500000
+display farclip  set 10.000000
+display depthcue   off
+display cuestart   0.500000
+display cueend     10.000000
+display cuestart   0.500000
+display cueend     10.000000
+display cuedensity 0.320000
+display cuemode    Exp2
+display shadows off
+display ambientocclusion off
+display aoambient 0.800000
+display aodirect 0.300000
+display dof off
+display dof_fnumber 64.000000
+display dof_focaldist 0.700000
+mol new ${file_CP} type xyz first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
+mol delrep 0 top
+mol representation CPK 0.500000 0.000000 32.000000 32.000000
+mol color ColorID 7
+mol selection {name "BCP"}
+mol material Opaque
+mol addrep top
+mol selupdate 0 top 0
+mol colupdate 0 top 0
+mol scaleminmax top 0 0.000000 0.000000
+mol smoothrep top 0 0
+mol drawframes top 0 {now}
+mol representation CPK 0.500000 0.000000 32.000000 32.000000
+mol color ColorID 23
+mol selection {name "RCP"}
+mol material Opaque
+mol addrep top
+mol selupdate 1 top 0
+mol colupdate 1 top 0
+mol scaleminmax top 1 0.000000 0.000000
+mol smoothrep top 1 0
+mol drawframes top 1 {now}
+mol representation CPK 0.500000 0.000000 32.000000 32.000000
+mol color ColorID 3
+mol selection {name "CCP"}
+mol material Opaque
+mol addrep top
+mol selupdate 2 top 0
+mol colupdate 2 top 0
+mol scaleminmax top 2 0.000000 0.000000
+mol smoothrep top 2 0
+mol drawframes top 2 {now}
+mol rename top ${file_CP}
+set viewpoints([molinfo top]) {{{1 0 0 -53.7046} {0 1 0 19.8436} {0 0 1 5.20528} {0 0 0 1}} {{0.986744 -0.0117779 0.161849 0} {-0.161661 0.0155891 0.986722 0} {-0.0141465 -0.999808 0.0134806 0} {0 0 0 1}} {{0.0955353 0 0 0} {0 0.0955353 0 0} {0 0 0.0955353 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}}}
+lappend viewplist [molinfo top]
+# done with molecule 0
+mol new ${file_BP} type xyz first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
+mol delrep 0 top
+mol representation CPK 0.200000 0.000000 32.000000 32.000000
+mol color ColorID 11
+mol selection {name "BP.*"}
+mol material Opaque
+mol addrep top
+mol selupdate 0 top 0
+mol colupdate 0 top 0
+mol scaleminmax top 0 0.000000 0.000000
+mol smoothrep top 0 0
+mol drawframes top 0 {now}
+mol rename top ${file_BP}
+set viewpoints([molinfo top]) {{{1 0 0 -53.7046} {0 1 0 19.8436} {0 0 1 5.20528} {0 0 0 1}} {{0.986744 -0.0117779 0.161849 0} {-0.161661 0.0155891 0.986722 0} {-0.0141465 -0.999808 0.0134806 0} {0 0 0 1}} {{0.0955353 0 0 0} {0 0.0955353 0 0} {0 0 0.0955353 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}}}
+lappend viewplist [molinfo top]
+# done with molecule 1
+mol new ${file_Geo} type xyz first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
+mol delrep 0 top
+mol representation CPK 0.800000 0.500000 32.000000 32.000000
+mol color Element
+mol selection {all}
+mol material Opaque
+mol addrep top
+mol selupdate 0 top 0
+mol colupdate 0 top 0
+mol scaleminmax top 0 0.000000 0.000000
+mol smoothrep top 0 0
+mol drawframes top 0 {now}
+mol rename top ${file_Geo}
+set viewpoints([molinfo top]) {{{1 0 0 -53.7046} {0 1 0 19.8436} {0 0 1 5.20528} {0 0 0 1}} {{0.986744 -0.0117779 0.161849 0} {-0.161661 0.0155891 0.986722 0} {-0.0141465 -0.999808 0.0134806 0} {0 0 0 1}} {{0.0955353 0 0 0} {0 0.0955353 0 0} {0 0 0.0955353 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}}}
+lappend viewplist [molinfo top]
+set topmol [molinfo top]
+# done with molecule 2
+foreach v \$viewplist {
+  molinfo \$v set {center_matrix rotate_matrix scale_matrix global_matrix} \$viewpoints(\$v)
+}
+foreach v \$fixedlist {
+  molinfo \$v set fixed 1
+}
+unset viewplist
+unset fixedlist
+mol top \$topmol
+unset topmol
+proc vmdrestoremycolors {} {
+color scale colors RWB {1.0 0.0 0.0} {1.0 1.0 1.0} {0.0 0.0 1.0}
+  color scale method RWB
+  set colorcmds {
+    {color Display {Background} white}
+    {color Display {BackgroundTop} black}
+    {color Display {BackgroundBot} blue2}
+    {color Display {FPS} white}
+    {color Name {LPA} green}
+    {color Name {LPB} green}
+    {color Name {B} pink}
+    {color Name {R} cyan}
+    {color Type {LP} green}
+    {color Type {DRUD} pink}
+    {color Type {B} pink}
+    {color Type {R} cyan}
+    {color Element {X} cyan}
+    {color Element {B} ochre}
+    {color Element {Cl} green}
+    {color Element {F} ochre}
+    {color Element {I} ochre}
+    {color Element {K} ochre}
+    {color Resname {} silver}
+    {color Chain {X} blue}
+    {color Segname {} blue}
+    {color Conformation {all} blue}
+    {color Molecule {0} blue}
+    {color Molecule {1} red}
+    {color Molecule {2} gray}
+    {color Structure {3_10_Helix} blue}
+    {color Surface {Grasp} gray}
+    {color Labels {Springs} orange}
+    {color Stage {Even} gray}
+    {color Stage {Odd} silver}
+  }
+  foreach colcmd \$colorcmds {
+    set val [catch {eval \$colcmd}]
+  }
+  color change rgb 0 0.0 0.0 1.0
+  color change rgb 2 0.3499999940395355 0.3499999940395355 0.3499999940395355
+  color change rgb 3 1.0 0.5 0.0
+  color change rgb 4 1.0 1.0 0.0
+  color change rgb 5 0.5 0.5 0.20000000298023224
+  color change rgb 6 0.6000000238418579 0.6000000238418579 0.6000000238418579
+  color change rgb 7 0.0 1.0 0.0
+  color change rgb 9 1.0 0.6000000238418579 0.6000000238418579
+  color change rgb 11 0.6499999761581421 0.0 0.6499999761581421
+  color change rgb 12 0.5 0.8999999761581421 0.4000000059604645
+  color change rgb 13 0.8999999761581421 0.4000000059604645 0.699999988079071
+  color change rgb 14 0.5 0.30000001192092896 0.0
+  color change rgb 15 0.5 0.5 0.75
+  color change rgb 17 0.8799999952316284 0.9700000286102295 0.019999999552965164
+  color change rgb 18 0.550000011920929 0.8999999761581421 0.019999999552965164
+  color change rgb 19 0.0 0.8999999761581421 0.03999999910593033
+  color change rgb 20 0.0 0.8999999761581421 0.5
+  color change rgb 21 0.0 0.8799999952316284 1.0
+  color change rgb 22 0.0 0.7599999904632568 1.0
+  color change rgb 23 0.019999999552965164 0.3799999952316284 0.6700000166893005
+  color change rgb 24 0.009999999776482582 0.03999999910593033 0.9300000071525574
+  color change rgb 25 0.27000001072883606 0.0 0.9800000190734863
+  color change rgb 26 0.44999998807907104 0.0 0.8999999761581421
+  color change rgb 27 0.8999999761581421 0.0 0.8999999761581421
+  color change rgb 28 1.0 0.0 0.6600000262260437
+  color change rgb 29 0.9800000190734863 0.0 0.23000000417232513
+  color change rgb 30 0.8100000023841858 0.0 0.0
+  color change rgb 31 0.8899999856948853 0.3499999940395355 0.0
+  color change rgb 32 0.9599999785423279 0.7200000286102295 0.0
+}
+vmdrestoremycolors
+label textsize 1.0
+
+END_VMD_SCRIPT
+}
+#-----------------------------------------------------------------------------# 
+help_and_syntax()
+{
+   the_prog_name=$1
+echo -e "\n    Script syntax: \033[1m$the_prog_name\033[0m [\033[0;4moption(s)\033[0m \
+[\033[4margument(s)\033[0m]] "
+#Here you may put a description of the script. The text between 'END_USAGE_TEXT'
+#will be displayed as it is.
+cat << END_USAGE_TEXT
+
+This script will create vmd files with the output of GPUAM for critical points
+
+Description of options. For instance:
+   -h                     Display the help menu.
+   -c "file_CritP.xyz"    File with all critical points.
+   -b "file_BPath.xyz"    File with all bond paths.
+   -g "file.xyz"          File with the geometry.
+
+END_USAGE_TEXT
+}
+#-----------------------------------------------------------------------------# 
+generate_vmd_from_CP_GPUAM(){
+   output_file_name="${file_name_cp%.xyz}.vmd"
+   echo "Create file: ${output_file_name}"
+   print_vmd_script $file_name_cp $file_name_bp $file_name_geo > $output_file_name
+}
+#-----------------------------------------------------------------------------# 
+# Main
+#-----------------------------------------------------------------------------# 
+
+file_name_cp=""
+file_name_bp=""
+file_name_geo=""
+
+if [ $cmdl_argc -eq 0 ] ; then
+   echo "Error: options missing (Try -h for more information.)."
+   exit 2
+fi
+
+while getopts ":hc:b:g:" opt; do
+  case $opt in
+    c)
+      file_name_cp="$OPTARG"
+      ;;
+    b)
+      file_name_bp="$OPTARG"
+      ;;
+    g)
+      file_name_geo="$OPTARG"
+      ;;
+    h)
+      help_and_syntax $prog_name
+      exit 0
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
+if [ ! -f $file_name_cp ] && [ -n "$file_name_cp" ]; then
+   echo "Error: input filename with critical points  missing (Try -h for more information.)."
+   exit 2
+fi
+if [ ! -f $file_name_bp ] && [ -n "$file_name_bp" ]; then
+   echo "Error: input filename with bond path  missing (Try -h for more information.)."
+   exit 2
+fi
+if [ ! -f $file_name_geo ] && [ -n "$file_name_geo" ]; then
+   echo "Error: input filename with geometry  missing (Try -h for more information.)."
+   exit 2
+fi
+
+generate_vmd_from_CP_GPUAM
+
